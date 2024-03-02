@@ -1,31 +1,7 @@
 import pygame
-from enum import Enum
 from collections import deque
 from random import randrange
-
-
-#  устанавливаем константы и доплолняем по ходу
-WIDTH = 15 * 10
-HEIGHT = 7 * 10
-SCALE = 10
-RADIUS = 1
-ELEMENT_SIZE = 10
-FPS = 60
-INITIAL_SPEED_DELAY = FPS // 2
-SNAKE_COLOR = "yellow"
-APPLE_COLOR = "red"
-SCORE_COLOR = "white"
-SCREEN_COLOR = "black"
-GAME_OVER_COLOR = "red"
-
-# направление для змейки
-
-
-class Direction(Enum):
-    UP = 1
-    RIGHT = 2
-    DOWN = 3
-    LEFT = 4
+from settings import *
 
 
 class Element:
@@ -61,7 +37,7 @@ class Snake:
         if self.direction == Direction.UP:
             return Element(head.x, head.y + 1)
         if self.direction == Direction.RIGHT:
-            return Element(head.x + 1,  head.y)
+            return Element(head.x + 1, head.y)
         if self.direction == Direction.DOWN:
             return Element(head.x, head.y - 1)
         if self.direction == Direction.LEFT:
@@ -106,7 +82,6 @@ def is_good_head(head: Element, snake: Snake) -> bool:
 
 
 #  Настрока интерфейса pygame, методы для обращения к библиотеке PyGame
-
 class Infrastructure:
     def __init__(self):
         pygame.init()
@@ -114,6 +89,7 @@ class Infrastructure:
         self.screen = pygame.display.set_mode(
             [WIDTH * SCALE, HEIGHT * SCALE])   # дисплей с заданными размерами
         self.clock = pygame.time.Clock()
+        self.speed = 1  # скорость змейки
 
     def is_quit_event(self) -> bool:
         for event in pygame.event.get():
@@ -166,7 +142,7 @@ class Infrastructure:
 
     def update_and_tick(self) -> None:  # обновление экрана
         pygame.display.update()
-        self.clock.tick(FPS*100)
+        self.clock.tick(FPS * self.speed)
 
     def quit(self) -> None:  # завершение работы
         pygame.quit()
@@ -205,6 +181,8 @@ class Game:
                 if head == self.apple:
                     self.score += 1
                     self.apple = gen_apple(self.snake)
+                    # повышение скорости змейки с каждым яблоком
+                    self.infrastructure.speed += 1
                 else:
                     self.snake.dequeue()
             else:

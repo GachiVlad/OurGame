@@ -13,6 +13,7 @@ APPLE_COLOR = "red"
 SCORE_COLOR = "white"
 SCREEN_COLOR = "black"
 GAME_OVER_COLOR = "red"
+PEAR_COLOR = "yellow"
 
 
 # направление для змейки

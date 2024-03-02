@@ -66,6 +66,16 @@ def gen_apple(snake: Snake):
     return candidate
 
 
+def gen_pear(snake: Snake):
+    candidate = None
+    while candidate is None:
+        candidate = get_random_element()
+        # проверка находится ли яблоко уже в теле змеи
+        if snake.is_contains(candidate):
+            candidate = None
+    return candidate
+
+
 # получение центра поля для начально позиции змеи
 def gen_center_element() -> Element:
     return Element(WIDTH // 2, HEIGHT // 2)
@@ -89,7 +99,7 @@ class Infrastructure:
         self.screen = pygame.display.set_mode(
             [WIDTH * SCALE, HEIGHT * SCALE])   # дисплей с заданными размерами
         self.clock = pygame.time.Clock()
-        self.speed = 1  # скорость змейки
+        self.speed = 3  # скорость змейки
 
     def is_quit_event(self) -> bool:
         for event in pygame.event.get():
@@ -130,6 +140,14 @@ class Infrastructure:
             (5, 5),
         )
 
+    # отображение уровня
+    def draw_level(self, lvl: int) -> None:
+        self.screen.blit(
+            self.font.render(f"Level: {lvl}", True, pygame.Color(
+                SCORE_COLOR)),
+            (5, 50),
+        )
+
     # создание текстовой надписи с определенным текстом и определенным размером
     def draw_game_over(self) -> None:
         message = self.font.render("GAME OVER", True, pygame.Color(
@@ -156,11 +174,13 @@ class Game:
         head = gen_center_element()
         self.snake = Snake(head)
         self.apple = gen_apple(self.snake)
+        self.pear = None
         self.tick_counter = 0
         self.score = 0
         self.snake_speed_delay = INITIAL_SPEED_DELAY
         self.is_running = True
         self.is_game_over = False
+        self.lvl = 1  # уровень змейки
 
     # Обработка событий, таких как нажатия клавиш и выход из игры
     def process_events(self) -> None:
@@ -181,8 +201,25 @@ class Game:
                 if head == self.apple:
                     self.score += 1
                     self.apple = gen_apple(self.snake)
-                    # повышение скорости змейки с каждым яблоком
-                    self.infrastructure.speed += 1
+                    if self.lvl == 1:
+                        if self.score == 10:
+                            self.lvl = 2
+                            self.pear = gen_pear(self.snake)
+                            # повышение скорости змейки с новым уровнем
+                            self.infrastructure.speed += 1
+                    elif self.lvl == 2:
+                        if self.score >= 30:
+                            self.lvl = 3
+                            # повышение скорости змейки с новым уровнем
+                            self.infrastructure.speed += 1
+                elif self.pear is not None and head == self.pear:
+                    self.pear = gen_pear(self.snake)
+                    self.score += 4
+                    if self.lvl == 2:
+                        if self.score >= 30:
+                            self.lvl = 3
+                            # повышение скорости змейки с новым уровнем
+                            self.infrastructure.speed += 1
                 else:
                     self.snake.dequeue()
             else:
@@ -194,7 +231,11 @@ class Game:
             self.infrastructure.draw_element(e.x, e.y, SNAKE_COLOR)
         self.infrastructure.draw_element(
             self.apple.x, self.apple.y, APPLE_COLOR)
+        if self.pear is not None:
+            self.infrastructure.draw_element(
+                self.pear.x, self.pear.y, PEAR_COLOR)
         self.infrastructure.draw_score(self.score)
+        self.infrastructure.draw_level(self.lvl)
         if self.is_game_over:
             self.infrastructure.draw_game_over()
         self.infrastructure.update_and_tick()

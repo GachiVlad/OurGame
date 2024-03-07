@@ -3,7 +3,7 @@ from enum import Enum
 #  устанавливаем константы для змейки
 WIDTH = 50
 HEIGHT = 50
-SCALE = 10
+SCALE = 12
 RADIUS = 1
 ELEMENT_SIZE = 10
 FPS = 60
@@ -13,7 +13,8 @@ APPLE_COLOR = "red"
 SCORE_COLOR = "white"
 SCREEN_COLOR = "black"
 GAME_OVER_COLOR = "red"
-PEAR_COLOR = "yellow"
+PEAR_COLOR = "orange"
+WALL_COLOR = "white"
 
 
 # направление для змейки

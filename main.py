@@ -3,91 +3,25 @@ from collections import deque
 from random import randrange
 from settings import *
 
+import player as pl
+import objects as obj
 
-class Element:
-    def __init__(self, x: int, y: int) -> None:
-        self.x = x
-        self.y = y
-
-    def __eq__(self, other) -> bool:
-        return self.x == other.x and self.y == other.y
+# code reminder:  you make new classes for apples and peaches
+# then you make code for final boss
 
 
-class Snake:
-    def __init__(self, head: Element):
-        self.snake = deque()
-        self.snake.appendleft(head)
-        self.direction = Direction.RIGHT  # текущий вектор движения
-
-    def set_direction(self, new_direction) -> None:
-        # ограниение направления в обратную сторону,
-        # когда размер змейки больше одного
-        if len(self.snake) == 1 or (
-                new_direction.value % 2 != self.direction.value % 2):
-            self.direction = new_direction
-
-    def enqueue(self, new_head: Element):
-        self.snake.appendleft(new_head)
-
-    def dequeue(self):
-        self.snake.pop()
-
-    def get_new_head(self) -> Element:   # направление движения
-        head = self.snake[0]
-        if self.direction == Direction.UP:
-            return Element(head.x, head.y + 1)
-        if self.direction == Direction.RIGHT:
-            return Element(head.x + 1, head.y)
-        if self.direction == Direction.DOWN:
-            return Element(head.x, head.y - 1)
-        if self.direction == Direction.LEFT:
-            return Element(head.x - 1, head.y)
-
-    def is_contains(self, element: Element) -> bool:
-        # проверка находится ли элемент на змейке
-        try:
-            self.snake.index(element)
-            return True
-        except ValueError:
-            return False
-
-
-def get_random_element() -> Element:
-    return Element(randrange(0, WIDTH), randrange(0, HEIGHT))
-
-
-def gen_apple(snake: Snake):
-    candidate = None
-    while candidate is None:
-        candidate = get_random_element()
-        # проверка находится ли яблоко уже в теле змеи
-        if snake.is_contains(candidate):
-            candidate = None
-    return candidate
-
-
-def gen_pear(snake: Snake):
-    candidate = None
-    while candidate is None:
-        candidate = get_random_element()
-        # проверка находится ли яблоко уже в теле змеи
-        if snake.is_contains(candidate):
-            candidate = None
-    return candidate
-
-
-# получение центра поля для начально позиции змеи
-def gen_center_element() -> Element:
-    return Element(WIDTH // 2, HEIGHT // 2)
+# получение центра поля для начальной позиции змеи
+def gen_center_element() -> pl.Element:
+    return pl.Element(WIDTH // 2, HEIGHT // 2)
 
 
 # проверка что элемент внутри поля
-def is_field_containts(e: Element) -> bool:
+def is_field_containts(e: pl.Element) -> bool:
     return 0 <= e.x < WIDTH and 0 <= e.y < HEIGHT
 
 
 # функция для проверки что внутри не находится на змейке
-def is_good_head(head: Element, snake: Snake) -> bool:
+def is_good_head(head: pl.Element, snake: pl.Snake) -> bool:
     return is_field_containts(head) and not snake.is_contains(head)
 
 
@@ -172,11 +106,11 @@ class Game:
     def __init__(self, infrastructure: Infrastructure) -> None:
         self.infrastructure = infrastructure
         head = gen_center_element()
-        self.snake = Snake(head)
-        self.apple = gen_apple(self.snake)
-        self.pear = None
+        self.snake = pl.Snake(head)
+        self.walls = []
+        self.fruits = [obj.Apple(self.snake, self.walls)]
         self.tick_counter = 0
-        self.score = 0
+        self.score = 9
         self.snake_speed_delay = INITIAL_SPEED_DELAY
         self.is_running = True
         self.is_game_over = False
@@ -190,6 +124,20 @@ class Game:
         if new_direction is not None:
             self.snake.set_direction(new_direction)
 
+    def newlevel(self):
+        if self.lvl == 1 and self.score >= 10:
+            self.lvl = 2
+            self.infrastructure.speed += 1
+            self.walls.append(obj.Wall(self.snake, self.walls))
+            self.fruits.append(obj.Pear(self.snake, self.walls))
+        if self.lvl == 2 and self.score >= 25:
+            self.lvl = 3
+            self.infrastructure.speed += 1
+            self.walls.extend([obj.Wall(self.snake, self.walls),
+                               obj.Wall(self.snake, self.walls)])
+            self.fruits.extend([obj.Apple(self.snake, self.walls),
+                                obj.Apple(self.snake, self.walls)])
+
     def update_state(self) -> None:
         if self.is_game_over:
             return
@@ -197,31 +145,21 @@ class Game:
         if not self.tick_counter % self.snake_speed_delay:
             head = self.snake.get_new_head()
             if is_good_head(head, self.snake):
+                if any(head == wall.obj for wall in self.walls):
+                    self.is_game_over = True
                 self.snake.enqueue(head)
-                if head == self.apple:
-                    self.score += 1
-                    self.apple = gen_apple(self.snake)
-                    if self.lvl == 1:
-                        if self.score == 10:
-                            self.lvl = 2
-                            self.pear = gen_pear(self.snake)
-                            # повышение скорости змейки с новым уровнем
-                            self.infrastructure.speed += 1
-                    elif self.lvl == 2:
-                        if self.score >= 30:
-                            self.lvl = 3
-                            # повышение скорости змейки с новым уровнем
-                            self.infrastructure.speed += 1
-                elif self.pear is not None and head == self.pear:
-                    self.pear = gen_pear(self.snake)
-                    self.score += 4
-                    if self.lvl == 2:
-                        if self.score >= 30:
-                            self.lvl = 3
-                            # повышение скорости змейки с новым уровнем
-                            self.infrastructure.speed += 1
-                else:
+                ate = 0
+                for object in self.fruits:
+                    if head == object.obj:
+                        self.score = object.eaten(
+                            self.score, self.snake, self.walls)
+                        ate = 1
+                        self.newlevel()
+                if ate == 0:
                     self.snake.dequeue()
+                for i in range(0, len(self.fruits)):
+                    if type(self.fruits[i]) is obj.Pear:
+                        self.fruits[i].move()
             else:
                 self.is_game_over = True
 
@@ -229,13 +167,18 @@ class Game:
         self.infrastructure.fill_screen()
         for e in self.snake.snake:
             self.infrastructure.draw_element(e.x, e.y, SNAKE_COLOR)
-        self.infrastructure.draw_element(
-            self.apple.x, self.apple.y, APPLE_COLOR)
-        if self.pear is not None:
-            self.infrastructure.draw_element(
-                self.pear.x, self.pear.y, PEAR_COLOR)
+
+        for object in self.fruits:
+            object.draw_obj(self.infrastructure)
+
+        if len(self.walls) > 0:
+            for wall in self.walls:
+                wall.draw_obj(self.infrastructure)
+
         self.infrastructure.draw_score(self.score)
+
         self.infrastructure.draw_level(self.lvl)
+
         if self.is_game_over:
             self.infrastructure.draw_game_over()
         self.infrastructure.update_and_tick()

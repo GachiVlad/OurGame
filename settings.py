@@ -23,3 +23,9 @@ class Direction(Enum):
     RIGHT = 2
     DOWN = 3
     LEFT = 4
+
+
+def delta_score_per_level(lvl: int):
+    return (5 + 5 * (lvl - 1))
+
+

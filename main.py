@@ -1,120 +1,25 @@
-import pygame
-from collections import deque
-from random import randrange
 from settings import *
-
+import infr
 import player as pl
 import objects as obj
 
-# code reminder:  you make new classes for apples and peaches
-# then you make code for final boss
-
-
-# получение центра поля для начальной позиции змеи
-def gen_center_element() -> pl.Element:
-    return pl.Element(WIDTH // 2, HEIGHT // 2)
-
-
-# проверка что элемент внутри поля
-def is_field_containts(e: pl.Element) -> bool:
-    return 0 <= e.x < WIDTH and 0 <= e.y < HEIGHT
-
-
-# функция для проверки что внутри не находится на змейке
-def is_good_head(head: pl.Element, snake: pl.Snake) -> bool:
-    return is_field_containts(head) and not snake.is_contains(head)
-
-
-#  Настрока интерфейса pygame, методы для обращения к библиотеке PyGame
-class Infrastructure:
-    def __init__(self):
-        pygame.init()
-        self.font = pygame.font.Font(None, 5 * SCALE)  # шрифт
-        self.screen = pygame.display.set_mode(
-            [WIDTH * SCALE, HEIGHT * SCALE])   # дисплей с заданными размерами
-        self.clock = pygame.time.Clock()
-        self.speed = 3  # скорость змейки
-
-    def is_quit_event(self) -> bool:
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:  # проверка на выход из игры
-                print("quit event")
-                return True
-        return False
-
-    def get_pressed_key(self) -> Direction:  # работа с клавишами
-        key = pygame.key.get_pressed()
-        if key[pygame.K_UP]:
-            return Direction.DOWN
-        if key[pygame.K_RIGHT]:
-            return Direction.RIGHT
-        if key[pygame.K_DOWN]:
-            return Direction.UP
-        if key[pygame.K_LEFT]:
-            return Direction.LEFT
-        return None
-
-    def fill_screen(self):    # заполнение эрана цветом
-        self.screen.fill(SCREEN_COLOR)
-
-    def draw_element(self, x, y, color):  # прямоуголиник на эране
-        pygame.draw.rect(
-            self.screen,
-            pygame.Color(color),
-            (x * SCALE, y * SCALE, ELEMENT_SIZE, ELEMENT_SIZE),
-            0,
-            RADIUS,
-        )
-
-    # отображение текста на экране
-    def draw_score(self, score: int) -> None:
-        self.screen.blit(
-            self.font.render(f"Score: {score}", True, pygame.Color(
-                SCORE_COLOR)),
-            (5, 5),
-        )
-
-    # отображение уровня
-    def draw_level(self, lvl: int) -> None:
-        self.screen.blit(
-            self.font.render(f"Level: {lvl}", True, pygame.Color(
-                SCORE_COLOR)),
-            (5, 50),
-        )
-
-    # создание текстовой надписи с определенным текстом и определенным размером
-    def draw_game_over(self) -> None:
-        message = self.font.render("GAME OVER", True, pygame.Color(
-            GAME_OVER_COLOR))
-        self.screen.blit(
-            message,
-            message.get_rect(center=((WIDTH // 2 * SCALE), (
-                HEIGHT // 2 * SCALE))),
-        )
-
-    def update_and_tick(self) -> None:  # обновление экрана
-        pygame.display.update()
-        self.clock.tick(FPS * self.speed)
-
-    def quit(self) -> None:  # завершение работы
-        pygame.quit()
-
-# Собираем все
-
 
 class Game:
-    def __init__(self, infrastructure: Infrastructure) -> None:
+    def __init__(self, infrastructure: infr.Infrastructure) -> None:
         self.infrastructure = infrastructure
-        head = gen_center_element()
+        head = pl.gen_center_element()
         self.snake = pl.Snake(head)
-        self.walls = []
-        self.fruits = [obj.Apple(self.snake, self.walls)]
+        self.walls = []  # стены
+        self.fruits = [obj.Apple(self.snake, self.walls)]  # фрукты
         self.tick_counter = 0
-        self.score = 9
+        self.score = 0  # очки
         self.snake_speed_delay = INITIAL_SPEED_DELAY
         self.is_running = True
         self.is_game_over = False
         self.lvl = 1  # уровень змейки
+        self.health = 1  # здоровье змейки
+        self.hit = 0  # флаг, получила ли змейка удар
+        self.req_score = 0  # очки, требуемые для получения нового уровня
 
     # Обработка событий, таких как нажатия клавиш и выход из игры
     def process_events(self) -> None:
@@ -124,19 +29,25 @@ class Game:
         if new_direction is not None:
             self.snake.set_direction(new_direction)
 
-    def newlevel(self):
-        if self.lvl == 1 and self.score >= 10:
-            self.lvl = 2
-            self.infrastructure.speed += 1
-            self.walls.append(obj.Wall(self.snake, self.walls))
-            self.fruits.append(obj.Pear(self.snake, self.walls))
-        if self.lvl == 2 and self.score >= 25:
-            self.lvl = 3
-            self.infrastructure.speed += 1
-            self.walls.extend([obj.Wall(self.snake, self.walls),
-                               obj.Wall(self.snake, self.walls)])
-            self.fruits.extend([obj.Apple(self.snake, self.walls),
-                                obj.Apple(self.snake, self.walls)])
+    def newlevel(self):  # это функция работы с уровнями
+        if self.score >= self.req_score + delta_score_per_level(self.lvl):
+            # повышение требуемых очков для повышения уровня
+            self.req_score += delta_score_per_level(self.lvl)
+
+            self.lvl += 1  # повышение уровня
+            self.health += 1  # доп здоровье
+            self.infrastructure.speed += 1  # увеличение скорости игры
+
+            # добавление новых стенок, в зависисмости от уровня
+            for i in range(0, self.lvl):
+                self.walls.append(obj.Wall(self.snake, self.walls))
+            # если уровень четный - добавляет персик
+            # если нечетный - добавляет 2 яблока
+            if (self.lvl % 2) == 0:
+                self.fruits.append(obj.Pear(self.snake, self.walls))
+            else:
+                self.fruits.append(obj.Apple(self.snake, self.walls))
+                self.fruits.append(obj.Apple(self.snake, self.walls))
 
     def update_state(self) -> None:
         if self.is_game_over:
@@ -144,43 +55,77 @@ class Game:
         self.tick_counter += 1
         if not self.tick_counter % self.snake_speed_delay:
             head = self.snake.get_new_head()
-            if is_good_head(head, self.snake):
-                if any(head == wall.obj for wall in self.walls):
-                    self.is_game_over = True
+            # если игрок не столкнулся сам с собой, границей и стеной
+            # или столкнулся на прошлом кадре (чтобы пройти сквозь препятствие)
+            if pl.is_good_head(head, self.snake) and all(
+                    head != wall.obj for wall in self.walls) or self.hit == 1:
+
+                #  увеличивает длину хмейки в направлении движения
                 self.snake.enqueue(head)
-                ate = 0
+
+                ate = 0  # показывает, съели фрукт или нет
+
+                # проверка, съела ли змейка один из фруктов
                 for object in self.fruits:
-                    if head == object.obj:
+                    if head == object.obj:  # проверка, съела ли змейка фрукт
+
+                        # генерация нового фрукта и изменение очков
                         self.score = object.eaten(
                             self.score, self.snake, self.walls)
-                        ate = 1
-                        self.newlevel()
+
+                        ate = 1  # флаг, что фрукт съелден
+                        self.newlevel()  # работа с новым уровнем
+                # если змейка ничего не ела - не увеличивает длину
                 if ate == 0:
                     self.snake.dequeue()
+
+                # движение пресиков
                 for i in range(0, len(self.fruits)):
                     if type(self.fruits[i]) is obj.Pear:
                         self.fruits[i].move()
+
+                # флаг, что змейка не ударилась
+                self.hit = 0
+            # если змейка ударилась в объект, снимает здоровье
+            # и запоминает, что на этом кадре змейка ударилась
             else:
+                self.health += -1
+                self.hit = 1
+
+            # игра кончается, если здоровье на нуле
+            if self.health == 0:
                 self.is_game_over = True
 
     def render(self) -> None:
         self.infrastructure.fill_screen()
+
+        # отрисовка змеи
         for e in self.snake.snake:
             self.infrastructure.draw_element(e.x, e.y, SNAKE_COLOR)
 
+        # отрисовка фруктов
         for object in self.fruits:
-            object.draw_obj(self.infrastructure)
+            self.infrastructure.draw_element(
+                object.obj.x, object.obj.y, object.color)
 
-        if len(self.walls) > 0:
-            for wall in self.walls:
-                wall.draw_obj(self.infrastructure)
+        # отрисовка стен
+        for wall in self.walls:
+            self.infrastructure.draw_element(
+                wall.obj.x, wall.obj.y, wall.color)
 
+        # отрисовка очков
         self.infrastructure.draw_score(self.score)
 
+        # отрисовка уровня
         self.infrastructure.draw_level(self.lvl)
 
+        # отрисовка здоровья
+        self.infrastructure.draw_health(self.health)
+
+        # отрисовка окончания игры
         if self.is_game_over:
             self.infrastructure.draw_game_over()
+
         self.infrastructure.update_and_tick()
 
     def loop(self):
@@ -192,5 +137,5 @@ class Game:
 
 
 if __name__ == "__main__":
-    game = Game(Infrastructure())
+    game = Game(infr.Infrastructure())
     game.loop()

@@ -48,3 +48,18 @@ class Snake:
             return True
         except ValueError:
             return False
+
+
+# получение центра поля для начальной позиции змеи
+def gen_center_element() -> Element:
+    return Element(WIDTH // 2, HEIGHT // 2)
+
+
+# проверка что элемент внутри поля
+def is_field_containts(e: Element) -> bool:
+    return 0 <= e.x < WIDTH and 0 <= e.y < HEIGHT
+
+
+# функция для проверки что внутри не находится на змейке
+def is_good_head(head: Element, snake: Snake) -> bool:
+    return is_field_containts(head) and not snake.is_contains(head)

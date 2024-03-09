@@ -3,6 +3,7 @@ from random import randrange
 import player as pl
 
 
+# класс объектов
 class Object:
     def __init__(self, snake: pl.Snake, walls) -> None:
         self.color = None

@@ -5,13 +5,15 @@ import player as pl
 
 # класс объектов
 class Object:
+    # общая инициализация объектов. Создает объект
     def __init__(self, snake: pl.Snake, walls) -> None:
-        self.color = None
         self.gen_object(snake, walls)
 
+    # генерирует случайное положение на игровом поле
     def get_random_element() -> pl.Element:
-        return pl.Element(randrange(0, WIDTH - 2), randrange(0, HEIGHT - 2))
+        return pl.Element(randrange(2, WIDTH - 2), randrange(2, HEIGHT - 2))
 
+    # генерирует наш объект, проверяя, что он вне стенки и змеи
     def gen_object(self, snake: pl.Snake, walls):
         candidate = None
         while candidate is None:
@@ -25,32 +27,38 @@ class Object:
                         candidate = None
         self.obj = candidate
 
-    def draw_obj(self, infrastructure):
-        infrastructure.draw_element(
-            self.obj.x, self.obj.y, self.color)
 
-
+# класс яблока. Яблоко - стандартный фрукт
 class Apple(Object):
+    # создание яблока, придаем ему цвет яблока
     def __init__(self, snake: pl.Snake, walls) -> None:
         Object.__init__(self, snake, walls)
         self.color = APPLE_COLOR
 
+    # метод, вызываемый когда яблоко съели.
+    # Генерирует новое яблоко и увеличивает очки на 1
     def eaten(self, score, snake, walls):
         score += 1
         self.gen_object(snake, walls)
         return score
 
 
+# класс груши. Груша - наше нововведение.
+# отличается от яблкоа тем, что перемещается по полю и дает больше очков
 class Pear(Object):
+    # создание груши, придаем ей цвет груши
     def __init__(self, snake: pl.Snake, walls) -> None:
         Object.__init__(self, snake, walls)
         self.color = PEAR_COLOR
 
+    # метод, вызываемый когда грушу съели.
+    # Генерирует новую грушу и увеличивает очки на 4
     def eaten(self, score, snake, walls):
         score += 4
         self.gen_object(snake, walls)
         return score
 
+    # метод перемещения груши. 
     def move(self):
         direction = randrange(1, 4)
         if direction == 1:
@@ -62,6 +70,8 @@ class Pear(Object):
         if direction == 4:
             self.obj.x += -0.5
 
+    # если груша выходит за грани игрового поля, то она появляется 
+    # на другом конце поля
         if self.obj.x == WIDTH + 1:
             self.obj.x = 1
         if self.obj.y == HEIGHT + 1:
@@ -72,6 +82,7 @@ class Pear(Object):
             self.obj.y = HEIGHT - 1
 
 
+# класс стены - непроходимого препятствия
 class Wall(Object):
     def __init__(self, snake: pl.Snake, walls) -> None:
         Object.__init__(self, snake, walls)

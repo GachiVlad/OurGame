@@ -25,7 +25,6 @@ class Direction(Enum):
     LEFT = 4
 
 
+# вычисление прибавки очков для новго уровня
 def delta_score_per_level(lvl: int):
     return (5 + 5 * (lvl - 1))
-
-

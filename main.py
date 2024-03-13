@@ -73,7 +73,7 @@ class Game:
                         self.score = object.eaten(
                             self.score, self.snake, self.walls)
 
-                        ate = 1  # флаг, что фрукт съелден
+                        ate = 1  # флаг, что фрукт съеден
                         self.newlevel()  # работа с новым уровнем
                 # если змейка ничего не ела - не увеличивает длину
                 if ate == 0:

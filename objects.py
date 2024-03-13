@@ -58,7 +58,7 @@ class Pear(Object):
         self.gen_object(snake, walls)
         return score
 
-    # метод перемещения груши. 
+    # метод перемещения груши.
     def move(self):
         direction = randrange(1, 4)
         if direction == 1:
@@ -70,7 +70,7 @@ class Pear(Object):
         if direction == 4:
             self.obj.x += -0.5
 
-    # если груша выходит за грани игрового поля, то она появляется 
+    # если груша выходит за грани игрового поля, то она появляется
     # на другом конце поля
         if self.obj.x == WIDTH + 1:
             self.obj.x = 1

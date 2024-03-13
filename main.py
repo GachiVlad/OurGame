@@ -5,7 +5,59 @@ import objects as obj
 
 
 class Game:
+    """Класс Игры. 
+    Это сама игра, здесь задает взаимодействие инфраструктуры со змейкой и объектами
+
+    Attributes
+    ----------
+    infrastructure : infr.Infrastructure
+        Инфраструктура игры
+    snake : pl.Snake
+        Змейка
+    walls : list
+        Список стен в текущй игры
+    fruits : list
+        Список фруктов в текущей игре
+    tick_counter : int
+        Внутренние часы игры
+    score : int
+        Количество очков
+    snake_speed_delay : int
+    is_running : bool
+        Флаг, показывает, запущена игра или нет
+    is_game_over : bool
+        Флаг, показывает, проиграл ли игрок или нет
+    lvl : int
+        уровень игрока
+    health : int
+        Здоровье змейки
+    hit : bool
+        Флаг, показывает, ударилась ли змейка на предыдущем шаге
+    req_score : int
+        Очки, требуемые для повышения уровня
+
+    Methods
+    ----------
+    __init__(snake, walls)
+        Запуск игры
+    process_events()
+        Обработка событий, таких как нажатия клавиш и выход из игры
+    newlevel()
+        Работа с новым уровнем змейки
+    update_state()
+        Обновление состояния игры на новом шаге
+    render()
+        Отрисовка игры
+    loop()
+        Цикл прохождения игры
+    """
     def __init__(self, infrastructure: infr.Infrastructure) -> None:
+        """
+         Parameters:
+        ----------
+        infrastructure : infr.Infrastructure
+            Инфраструктура игры
+        """
         self.infrastructure = infrastructure
         head = pl.gen_center_element()
         self.snake = pl.Snake(head)
@@ -18,7 +70,7 @@ class Game:
         self.is_game_over = False
         self.lvl = 1  # уровень змейки
         self.health = 1  # здоровье змейки
-        self.hit = 0  # флаг, получила ли змейка удар
+        self.hit = False  # флаг, получила ли змейка удар
         self.req_score = 0  # очки, требуемые для получения нового уровня
 
     # Обработка событий, таких как нажатия клавиш и выход из игры
@@ -58,12 +110,12 @@ class Game:
             # если игрок не столкнулся сам с собой, границей и стеной
             # или столкнулся на прошлом кадре (чтобы пройти сквозь препятствие)
             if pl.is_good_head(head, self.snake) and all(
-                    head != wall.obj for wall in self.walls) or self.hit == 1:
+                    head != wall.obj for wall in self.walls) or self.hit:
 
                 #  увеличивает длину хмейки в направлении движения
                 self.snake.enqueue(head)
 
-                ate = 0  # показывает, съели фрукт или нет
+                ate = False  # показывает, съели фрукт или нет
 
                 # проверка, съела ли змейка один из фруктов
                 for object in self.fruits:
@@ -73,10 +125,10 @@ class Game:
                         self.score = object.eaten(
                             self.score, self.snake, self.walls)
 
-                        ate = 1  # флаг, что фрукт съеден
+                        ate = True  # флаг, что фрукт съеден
                         self.newlevel()  # работа с новым уровнем
                 # если змейка ничего не ела - не увеличивает длину
-                if ate == 0:
+                if ate is False:
                     self.snake.dequeue()
 
                 # движение пресиков
@@ -85,12 +137,12 @@ class Game:
                         self.fruits[i].move()
 
                 # флаг, что змейка не ударилась
-                self.hit = 0
+                self.hit = False
             # если змейка ударилась в объект, снимает здоровье
             # и запоминает, что на этом кадре змейка ударилась
             else:
                 self.health += -1
-                self.hit = 1
+                self.hit = True
 
             # игра кончается, если здоровье на нуле
             if self.health == 0:
